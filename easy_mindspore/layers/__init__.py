@@ -1,3 +1,5 @@
+"""include missing operators and some new layers like Transformer."""
+
 from .convolutionals import Conv1d
 from .dense import Dense
 from .embeddings import Embedding
