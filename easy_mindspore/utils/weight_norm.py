@@ -1,10 +1,10 @@
+from mindspore.common.parameter import Parameter
 import mindspore.nn as nn
 import mindspore.ops as P
 import mindspore.numpy as mnp
 from mindspore import Tensor
 from mindspore.ops import constexpr
 
-@constexpr
 def norm_except_dim(v, pow, dim):
     if dim == -1:
         return mnp.norm(v, pow)
@@ -17,6 +17,9 @@ def norm_except_dim(v, pow, dim):
     else:
         return norm_except_dim(v.swapaxes(0, dim), pow, dim).swapaxes(0, dim)
 
+def _weight_norm(v, g, dim):
+    return v * (g / norm_except_dim(v, 2, dim))
+
 class WeightNorm(nn.Cell):
     r"""Applies weight normalization to a parameter in the given module.
 
@@ -24,13 +27,7 @@ class WeightNorm(nn.Cell):
          \mathbf{w} = g \dfrac{\mathbf{v}}{\|\mathbf{v}\|}
 
     Weight normalization is a reparameterization that decouples the magnitude
-    of a weight tensor from its direction. This replaces the parameter specified
-    by :attr:`name` (e.g. ``'weight'``) with two parameters: one specifying the magnitude
-    (e.g. ``'weight_g'``) and one specifying the direction (e.g. ``'weight_v'``).
-    Weight normalization is implemented via a hook that recomputes the weight
-    tensor from the magnitude and direction before every :meth:`~Module.forward`
-    call.
-
+    of a weight tensor from its direction. 
     By default, with ``dim=0``, the norm is computed independently per output
     channel/plane. To compute a norm over the entire weight tensor, use
     ``dim=None``.
@@ -57,18 +54,22 @@ class WeightNorm(nn.Cell):
         super().__init__()
         if dim is None:
             dim = -1
-        weight = getattr(module, 'weight')
         self.dim = dim
         self.module = module
         self.assign = P.Assign()
         # add g and v as new parameters and express w as g/||v|| * v
-        self.param_g = Tensor(norm_except_dim(weight, 2, dim))
-        self.param_v = Tensor(weight.data)
+        self.param_g = Parameter(Tensor(norm_except_dim(self.module.weight, 2, dim)))
+        self.param_v = Parameter(Tensor(self.module.weight.data))
+        self.module.weight.set_data(_weight_norm(self.param_v, self.param_g, self.dim))
+        self.use_weight_norm = True
 
     def construct(self, *inputs, **kwargs):
-        if not self.training:
+        if not self.use_weight_norm:
             return self.module(*inputs, **kwargs)
-        norm = norm_except_dim(self.param_v, 2, self.dim)
-        norm_weight = self.param_v * (self.param_g / norm)
-        self.assign(self.module.weight, norm_weight)
+        self.assign(self.module.weight, _weight_norm(self.param_v, self.param_g, self.dim))
         return self.module(*inputs, **kwargs)
+
+    def remove_weight_norm(self):
+        self.assign(self.module.weight, _weight_norm(self.param_v, self.param_g, self.dim))
+        self.use_weight_norm = False
+
