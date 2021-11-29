@@ -1,2 +1,2 @@
-mindspore-gpu
+mindspore-gpu>=1.5.0
 numpy

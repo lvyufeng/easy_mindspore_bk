@@ -9,6 +9,7 @@ class Embedding(nn.Embedding):
         if embedding_table == 'normal':
             embedding_table = Normal(1.0)
         super().__init__(vocab_size, embedding_size, use_one_hot, embedding_table, dtype, padding_idx)
+
     @classmethod
     def from_pretrained_embedding(cls, embeddings:Tensor, freeze=True, padding_idx=None):
         rows, cols = embeddings.shape
