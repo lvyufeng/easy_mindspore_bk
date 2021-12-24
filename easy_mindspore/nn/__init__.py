@@ -5,7 +5,7 @@ from .pooling_layers import *
 from .dense import Dense
 from .embeddings import Embedding
 # normalizations
-from .layer_norm import LayerNorm
+from .norm_layers import LayerNorm
 # activations
 from mindspore.nn import ELU, HShrink, HSigmoid, HSwish, \
     LeakyReLU, LogSigmoid, PReLU, ReLU, ReLU6, CELU, GELU, \
