@@ -63,3 +63,17 @@ class ReflectionPad3d(_ReflectionPadNd):
             outputs = super().construct(reshaped_inputs, paddings)
             return outputs.reshape(*in_shape[:2], *outputs.shape[1:])
         return super().construct(inputs, paddings)
+
+class ZeroPad2d(nn.Cell):
+    def __init__(self, padding: Union[int, Tuple[int, int, int, int]]):
+        super().__init__()
+        if isinstance(padding, int):
+            self.padding = (padding, padding, padding, padding)
+        else:
+            self.padding = padding
+
+    def construct(self, inputs):
+        ndim = inputs.ndim
+        paddings = ((0, 0),) * (ndim - 2) + \
+            ((self.padding[2], self.padding[3]),(self.padding[0], self.padding[1]),)
+        return ops.Pad(paddings)(inputs)

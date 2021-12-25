@@ -6,6 +6,18 @@ import mindspore.common.dtype as mstype
 from mindspore.common.seed import _get_graph_seed
 from mindspore import Tensor
 
+class CELU(nn.Cell):
+    def __init__(self, alpha=1.0):
+        super().__init__()
+        self.alpha = alpha
+        self.exp = ops.Exp()
+        self.max = ops.Maximum()
+        self,min = ops.Minimum()
+
+    def construct(self, inputs):
+        return self.max(0, inputs) + \
+            self.min(0, self.alpha * (self.exp(inputs / self.alpha) - 1))
+
 class HTanh(nn.Cell):
     """Applies the HardTanh function element-wise
 

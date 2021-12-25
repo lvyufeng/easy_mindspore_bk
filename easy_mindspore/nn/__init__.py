@@ -4,11 +4,13 @@ from .convolutionals import Conv1d
 from .pooling_layers import *
 from .dense import Dense
 from .embeddings import Embedding
+# padding layers
+from .padding_layers import *
 # normalizations
 from .norm_layers import LayerNorm
 # activations
 from mindspore.nn import ELU, HShrink, HSigmoid, HSwish, \
-    LeakyReLU, LogSigmoid, PReLU, ReLU, ReLU6, CELU, GELU, \
+    LeakyReLU, LogSigmoid, PReLU, ReLU, ReLU6, GELU, \
     Sigmoid, SoftShrink, Tanh, LogSoftmax
 from .activations import *
 # rnns
