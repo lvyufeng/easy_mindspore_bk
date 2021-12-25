@@ -64,6 +64,31 @@ class ReflectionPad3d(_ReflectionPadNd):
             return outputs.reshape(*in_shape[:2], *outputs.shape[1:])
         return super().construct(inputs, paddings)
 
+class ReplicationPad1d(nn.Cell):
+    def __init__(self, padding: Union[int, Tuple[int, int]]):
+        super().__init__()
+        if isinstance(padding, int):
+            self.padding = (padding, padding)
+        else:
+            self.padding = padding
+        self.concat = ops.Concat(-1)
+        self.tile = ops.Tile()
+
+    def construct(self, inputs):
+        in_shape = inputs.shape
+        inputs = inputs.reshape(-1, in_shape[-1])
+        tensors = (inputs, )
+        print(inputs)
+        if self.padding[0] != 0:
+            left = self.tile(inputs[:, 0:1], (1, self.padding[0]))
+            print(left)
+            tensors = (left, ) + tensors
+        if self.padding[1] != 0:
+            right = self.tile(inputs[:, (in_shape[-1] - 1):in_shape[-1]], (1, self.padding[-1]))
+            tensors = tensors + (right, ) 
+        outputs = self.concat(tensors)
+        return outputs.reshape(*in_shape[:-1], -1)
+
 class ZeroPad2d(nn.Cell):
     def __init__(self, padding: Union[int, Tuple[int, int, int, int]]):
         super().__init__()
