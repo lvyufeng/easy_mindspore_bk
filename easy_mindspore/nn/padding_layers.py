@@ -78,14 +78,12 @@ class ReplicationPad1d(nn.Cell):
         in_shape = inputs.shape
         inputs = inputs.reshape(-1, in_shape[-1])
         tensors = (inputs, )
-        print(inputs)
         if self.padding[0] != 0:
             left = self.tile(inputs[:, 0:1], (1, self.padding[0]))
-            print(left)
             tensors = (left, ) + tensors
         if self.padding[1] != 0:
             right = self.tile(inputs[:, (in_shape[-1] - 1):in_shape[-1]], (1, self.padding[-1]))
-            tensors = tensors + (right, ) 
+            tensors = tensors + (right, )
         outputs = self.concat(tensors)
         return outputs.reshape(*in_shape[:-1], -1)
 
@@ -102,3 +100,25 @@ class ZeroPad2d(nn.Cell):
         paddings = ((0, 0),) * (ndim - 2) + \
             ((self.padding[2], self.padding[3]),(self.padding[0], self.padding[1]),)
         return ops.Pad(paddings)(inputs)
+
+class ConstantPad1d(nn.Cell):
+    def __init__(self, padding: Union[int, Tuple[int, int]], value):
+        super().__init__()
+        if isinstance(padding, int):
+            self.padding = (padding, padding)
+        else:
+            self.padding = padding
+        self.value = value
+        self.concat = ops.Concat(-1)
+        self.fill = ops.Fill()
+
+    def construct(self, inputs):
+        in_shape = inputs.shape
+        tensors = (inputs, )
+        if self.padding[0] != 0:
+            left = self.fill(inputs.dtype, in_shape[:-1] + (self.padding[0],), self.value)
+            tensors = (left, ) + tensors
+        if self.padding[1] != 0:
+            right = self.fill(inputs.dtype, in_shape[:-1] + (self.padding[1],), self.value)
+            tensors = tensors + (right, )
+        return self.concat(tensors)
