@@ -2,7 +2,9 @@
 from mindspore.nn.layer.activation import Sigmoid
 from .convolutionals import Conv1d
 from .pooling_layers import *
-from .dense import Dense
+# dense layers
+from .dense import *
+# embedding layers
 from .embeddings import Embedding
 # padding layers
 from .padding_layers import *
