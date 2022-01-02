@@ -7,6 +7,7 @@ from mindspore._checkparam import Validator as validator
 from typing import overload, Union, List, Tuple
 # from . import callbacks, core, datasets, initializers, layers, metrics, operators
 from .tensor import *
+from .core.api import *
 
 _size = Union[List[int], Tuple[int, ...]]
 
