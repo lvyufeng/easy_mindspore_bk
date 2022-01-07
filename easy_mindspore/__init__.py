@@ -5,7 +5,6 @@ import mindspore.common.dtype as mstype
 from mindspore.ops import constexpr
 from mindspore._checkparam import Validator as validator
 from typing import overload, Union, List, Tuple
-# from . import callbacks, core, datasets, initializers, layers, metrics, operators
 from .tensor import *
 from .core.api import *
 

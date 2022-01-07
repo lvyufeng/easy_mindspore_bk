@@ -1,4 +1,4 @@
-from setuptools import setup, version
+from setuptools import setup, version, find_packages
 
 setup(
     name='easy_mindspore',
@@ -8,5 +8,5 @@ setup(
     author='lvyufeng',
     author_email='lvyufeng2007@hotmail.com',
     license='MIT',
-    packages=['easy_mindspore']
+    packages=find_packages()
 )
