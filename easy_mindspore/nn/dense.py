@@ -33,12 +33,14 @@ class BiDense(nn.Cell):
             self.bias = None
 
     def construct(self, input1, input2):
-        tensors = ()
-        for k in range(self.out_channels):
-            buff = ops.MatMul()(input1, self.weight[k])
-            buff = buff * input2
-            tensors += (buff.sum(1, keepdims=True), )
-        outputs = ops.Concat(1)(tensors)
+        batch_size = input1.shape[0]
+        # (batch, in1) * (in1, in2, out) = (batch, in2, out)
+        output = ops.matmul(input1, self.weight.transpose(1, 2, 0).view(self.in1_channels, -1))
+        output = output.view(batch_size, self.in2_channels, self.out_channels)
+        # (out, batch, in2) * (batch, in2) = (out, batch, in2)
+        output = output.transpose(2, 0, 1) * input2
+        # (out, batch, in2) -> (batch, out)
+        output = output.sum(2).swapaxes(0, 1)
         if self.has_bias:
-            outputs += self.bias
-        return outputs
+            output += self.bias
+        return output

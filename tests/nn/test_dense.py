@@ -1,6 +1,4 @@
 import unittest
-import mindspore.numpy as mnp
-from mindspore.numpy.math_ops import outer
 from easy_mindspore.nn import BiDense
 from easy_mindspore import randn
 
