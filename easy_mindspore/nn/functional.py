@@ -16,9 +16,29 @@ def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean
     pass
 
 def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean'):
+    ndim = input.ndim
+    if ndim == 2:
+        ret = _nll_loss(input, target, -1, weight, ignore_index, reduction)
+    elif input.ndim == 4:
+        ret = _nll_loss(input, target, 1, weight, ignore_index, reduction)
+    else:
+        # ndim == 3 or ndim > 4
+        n = input.shape[0]
+        c = input.shape[1]
+        out_size = (n,) + input.shape[2:]
+        input = input.view(n, c, 1, -1)
+        target = target.view(n, 1, -1)
+        if reduction != 'none':
+            ret = _nll_loss(input, target, 1, weight, ignore_index, reduction)
+        else:
+            ret = _nll_loss(input, target, 1, weight, ignore_index)
+            ret = ret.view(out_size)
+    return ret
+
+def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, reduction='none'):
     if target.ndim == input.ndim - 1:
-        target = target.expand_dims(-1)
-    nll_loss = -ops.gather_d(input, -1, target)
+        target = target.expand_dims(target_dim)
+    nll_loss = -ops.gather_d(input, target_dim, target)
     if weight is not None:
         loss_weights = ops.gather(weight, target, 0)
         nll_loss = nll_loss * loss_weights
@@ -29,7 +49,7 @@ def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean'):
         nll_loss = nll_loss.masked_fill(non_pad_mask, 0.)
         loss_weights = loss_weights.masked_fill(non_pad_mask, 0.)
     else:
-        nll_loss = nll_loss.squeeze(-1)
+        nll_loss = nll_loss.squeeze(target_dim)
     if reduction == 'sum':
         return nll_loss.sum()
     if reduction == 'mean':

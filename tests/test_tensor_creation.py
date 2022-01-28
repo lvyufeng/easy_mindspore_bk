@@ -4,10 +4,6 @@ import mindspore.common.dtype as mstype
 import easy_mindspore as ems
 
 class TestTensorCreation(unittest.TestCase):
-    def test_default_float32(self):
-        x = ems.Tensor([1, 2, 3])
-        assert x.dtype == mstype.float32
-    
     def test_type_inference_float(self):
         x = ems.tensor([1., 2., 3.])
         y = ems.tensor([1, 2, 3])

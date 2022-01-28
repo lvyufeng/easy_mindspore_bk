@@ -1,3 +1,3 @@
-# Easy MindSpore: a MindSpore warapper for easy usage.
+# Easy MindSpore: a MindSpore wrapper for easy usage.
 
 ## About EasyMS
