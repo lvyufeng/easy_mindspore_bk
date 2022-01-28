@@ -1,6 +1,9 @@
 import mindspore.ops as ops
 import mindspore.numpy as mnp
 
+def log_softmax(input, axis=-1):
+    return ops.LogSoftmax(axis)(input)
+
 def kl_div(input, target, reduction='none', log_target=False):
     if log_target:
         kl_div = ops.exp(target) * (target - input)
@@ -13,9 +16,9 @@ def kl_div(input, target, reduction='none', log_target=False):
     return kl_div
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
-    pass
+    return nll_loss(log_softmax(input, 1), target, weight, ignore_index, reduction, label_smoothing)
 
-def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean'):
+def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean', label_smoothing=0.0):
     ndim = input.ndim
     if ndim == 2:
         ret = _nll_loss(input, target, -1, weight, ignore_index, reduction)
@@ -35,10 +38,11 @@ def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean'):
             ret = ret.view(out_size)
     return ret
 
-def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, reduction='none'):
+def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
     if target.ndim == input.ndim - 1:
         target = target.expand_dims(target_dim)
     nll_loss = -ops.gather_d(input, target_dim, target)
+    smooth_loss = -input.sum(axis=target_dim, keepdims=True)
     if weight is not None:
         loss_weights = ops.gather(weight, target, 0)
         nll_loss = nll_loss * loss_weights
@@ -48,10 +52,16 @@ def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, redu
         non_pad_mask = ops.equal(target, ignore_index)
         nll_loss = nll_loss.masked_fill(non_pad_mask, 0.)
         loss_weights = loss_weights.masked_fill(non_pad_mask, 0.)
+        smooth_loss = smooth_loss.masked_fill(non_pad_mask, 0.)
     else:
         nll_loss = nll_loss.squeeze(target_dim)
+        smooth_loss = smooth_loss.squeeze(target_dim)
+
     if reduction == 'sum':
-        return nll_loss.sum()
+        nll_loss = nll_loss.sum()
     if reduction == 'mean':
-        return nll_loss.sum() / loss_weights.sum()
-    return nll_loss
+        nll_loss = nll_loss.sum() / loss_weights.sum()
+
+    eps_i = label_smoothing / input.shape[target_dim]
+    loss = (1. - label_smoothing) * nll_loss + eps_i * smooth_loss
+    return loss
