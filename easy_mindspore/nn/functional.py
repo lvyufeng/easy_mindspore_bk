@@ -1,5 +1,7 @@
 import mindspore.ops as ops
-import mindspore.numpy as mnp
+
+def softmax(input, axis=-1):
+    return ops.Softmax(axis)(input)
 
 def log_softmax(input, axis=-1):
     return ops.LogSoftmax(axis)(input)
