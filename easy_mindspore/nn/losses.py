@@ -28,6 +28,20 @@ class NLLLoss(nn.Cell):
     def construct(self, input, target):
         return nll_loss(input, target, self.weight, self.ignore_index, self.reduction)
 
+class BCEWithLogitsLoss(nn.Cell):
+    reduction_list = ['sum', 'mean', 'none']
+    def __init__(self, weight: Optional[Tensor] = None, reduction: str = 'mean',
+                 pos_weight: Optional[Tensor] = None):
+        super().__init__()
+        if reduction not in self.reduction_list:
+            raise ValueError(f'Unsupported reduction {reduction}')
+        self.weight = weight
+        self.pos_weight = pos_weight
+        self.reduction = reduction
+
+    def construct(self, input, target):
+        return binary_cross_entropy_with_logits(input, target, self.weight, self.reduction, self.pos_weight)
+
 class CrossEntropy(nn.Cell):
     reduction_list = ['sum', 'mean', 'none']
     def __init__(self, weight: Optional[Tensor]=None, ignore_index:int=-100, reduction:str='mean', label_smoothing:float=0.0):        

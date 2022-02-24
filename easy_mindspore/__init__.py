@@ -106,3 +106,8 @@ def normal(mean, std, shape):
     if isinstance(std, Tensor):
         mean = std.asnumpy()
     return Tensor(np.random.normal(mean, std, shape))
+
+def flatten(x, start_dim=0, end_dim=-1):
+    x_shape = x.shape
+    res_shape = x_shape[0:start_dim] + (-1,) + x_shape[end_dim:-1]
+    return x.reshape(res_shape)
