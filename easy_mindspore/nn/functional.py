@@ -136,7 +136,9 @@ def kl_div(input, target, reduction='none', log_target=False):
     if log_target:
         kl_div = ops.exp(target) * (target - input)
     else:
-        kl_div = target * (ops.log(target) - input)
+        output = target * (ops.log(target) - input)
+        zeros = ops.zeros_like(input)
+        kl_div = ops.select(target > 0, output, zeros)
     if reduction == 'sum':
         return kl_div.sum()
     if reduction == 'mean':
@@ -149,9 +151,9 @@ def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean
 def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean', label_smoothing=0.0):
     ndim = input.ndim
     if ndim == 2:
-        ret = _nll_loss(input, target, -1, weight, ignore_index, reduction)
+        ret = _nll_loss(input, target, -1, weight, ignore_index, reduction, label_smoothing)
     elif input.ndim == 4:
-        ret = _nll_loss(input, target, 1, weight, ignore_index, reduction)
+        ret = _nll_loss(input, target, 1, weight, ignore_index, reduction, label_smoothing)
     else:
         # ndim == 3 or ndim > 4
         n = input.shape[0]
@@ -160,9 +162,9 @@ def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean', la
         input = input.view(n, c, 1, -1)
         target = target.view(n, 1, -1)
         if reduction != 'none':
-            ret = _nll_loss(input, target, 1, weight, ignore_index, reduction)
+            ret = _nll_loss(input, target, 1, weight, ignore_index, reduction, label_smoothing)
         else:
-            ret = _nll_loss(input, target, 1, weight, ignore_index)
+            ret = _nll_loss(input, target, 1, weight, ignore_index, label_smoothing=label_smoothing)
             ret = ret.view(out_size)
     return ret
 
@@ -187,11 +189,14 @@ def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, redu
 
     if reduction == 'sum':
         nll_loss = nll_loss.sum()
+        smooth_loss = smooth_loss.sum()
     if reduction == 'mean':
         nll_loss = nll_loss.sum() / loss_weights.sum()
-
+        smooth_loss = smooth_loss.mean()
+    
     eps_i = label_smoothing / input.shape[target_dim]
     loss = (1. - label_smoothing) * nll_loss + eps_i * smooth_loss
+
     return loss
 
 def binary_cross_entropy(input, target, weight=None, reduction='mean'):
