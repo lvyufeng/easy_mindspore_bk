@@ -5,6 +5,7 @@ import mindspore.ops as ops
 import mindspore.common.dtype as mstype
 from mindspore.common.seed import _get_graph_seed
 from mindspore import Tensor
+from torch import logit
 
 class CELU(nn.Cell):
     def __init__(self, alpha=1.0):
@@ -19,7 +20,7 @@ class CELU(nn.Cell):
             self.min(0, self.alpha * (self.exp(inputs / self.alpha) - 1))
 
 class HTanh(nn.Cell):
-    """Applies the HardTanh function element-wise
+    r"""Applies the HardTanh function element-wise
 
     HardTanh is defined as:
 
@@ -64,7 +65,7 @@ class HTanh(nn.Cell):
         return x_max
 
 class RReLU(nn.Cell):
-    """Applies the randomized leaky rectified liner unit function, element-wise,
+    r"""Applies the randomized leaky rectified liner unit function, element-wise,
     as described in the paper:
 
     `Empirical Evaluation of Rectified Activations in Convolutional Network`_.
@@ -122,7 +123,7 @@ class RReLU(nn.Cell):
         return self.relu(inputs) - self.relu(-inputs) * alpha
         
 class SELU(nn.Cell):
-    """Applied element-wise, as:
+    r"""Applied element-wise, as:
 
     .. math::
         \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
@@ -152,7 +153,7 @@ class SELU(nn.Cell):
         return self.selu(inputs)
 
 class SiLU(nn.Cell):
-    """Applies the Sigmoid Linear Unit (SiLU) function, element-wise.
+    r"""Applies the Sigmoid Linear Unit (SiLU) function, element-wise.
     The SiLU function is also known as the swish function.
 
     .. math::
@@ -176,7 +177,7 @@ class SiLU(nn.Cell):
         return inputs * self.sigmoid(inputs)
 
 class Mish(nn.Cell):
-    """Applies the Mish function, element-wise.
+    r"""Applies the Mish function, element-wise.
     Mish: A Self Regularized Non-Monotonic Neural Activation Function.
 
     .. math::
@@ -203,7 +204,7 @@ class Mish(nn.Cell):
         return self.mish(inputs)
 
 class Softplus(nn.Cell):
-    """Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{Softplus}(x) = \frac{1}{\beta} * \log(1 + \exp(\beta * x))
@@ -236,7 +237,7 @@ class Softplus(nn.Cell):
         return self.softplus(inputs)
 
 class Softsign(nn.Cell):
-    """Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{SoftSign}(x) = \frac{x}{ 1 + |x|}
@@ -259,7 +260,7 @@ class Softsign(nn.Cell):
         return self.softsign(inputs)
 
 class Tanhshrink(nn.Cell):
-    """Applies the element-wise function:
+    r"""Applies the element-wise function:
 
     .. math::
         \text{Tanhshrink}(x) = x - \tanh(x)
@@ -282,7 +283,7 @@ class Tanhshrink(nn.Cell):
         return inputs - self.tanh(inputs)
 
 class Threshold(nn.Cell):
-    """Thresholds each element of the input Tensor.
+    r"""Thresholds each element of the input Tensor.
 
     Threshold is defined as:
 
@@ -321,7 +322,7 @@ class Threshold(nn.Cell):
         return self.select(cond, inputs, value)
 
 class GLU(nn.Cell):
-    """Applies the gated linear unit function
+    r"""Applies the gated linear unit function
     :math:`{GLU}(a, b)= a \otimes \sigma(b)` where :math:`a` is the first half
     of the input matrices and :math:`b` is the second half.
 
@@ -349,7 +350,7 @@ class GLU(nn.Cell):
         return a * self.sigmoid(b)
 
 class Softmin(nn.Cell):
-    """Applies the Softmin function to an n-dimensional input Tensor
+    r"""Applies the Softmin function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
     lie in the range `[0, 1]` and sum to 1.
 
@@ -377,6 +378,7 @@ class Softmin(nn.Cell):
         >>> inputs = ops.ones(4, 2)
         >>> outputs = m(inputs)
     """
+
     def __init__(self, axis=-1):
         super().__init__()
         self.axis = axis
@@ -389,7 +391,7 @@ class Softmin(nn.Cell):
         return x_exp / partion
 
 class Softmax2d(nn.Cell):
-    """Applies SoftMax over features to each spatial location.
+    r"""Applies SoftMax over features to each spatial location.
 
     When given an image of ``Channels x Height x Width``, it will
     apply `Softmax` to each location :math:`(Channels, h_i, w_j)`
@@ -422,3 +424,30 @@ class Softmax2d(nn.Cell):
         x_exp = self.exp(inputs)
         partion = self.reduce_sum(x_exp, perm)
         return x_exp / partion
+
+class GumbelSoftmax(nn.Cell):
+    def __init__(self, temperature=1, hard=False, axis=-1):
+        super().__init__()
+        self.temperature = temperature
+        self.hard = hard
+        self.axis = axis
+        self.uniform = ops.UniformReal()
+        self.softmax = ops.Softmax(axis)
+        self.on_value = Tensor(1.0, mindspore.float32)
+        self.off_value = Tensor(0.0, mindspore.float32)
+
+    def construct(self, logits):
+        uniform_samples = self.uniform(logits.shape)
+        gumbels = -ops.log(-ops.log(uniform_samples)) # ~Gumbel(0, 1)
+        gumbels = (logits + gumbels) / self.temperature
+        y_soft = self.softmax(gumbels)
+
+        if self.hard:
+            # Straight through
+            index = y_soft.argmax(self.axis)
+            y_hard = ops.OneHot(self.axis)(index, y_soft.shape[self.axis], self.on_value, self.off_value)
+            ret = ops.stop_gradient(y_hard - y_soft) + y_soft
+        else:
+            # Reparametrization trick.
+            ret = y_soft
+        return ret
