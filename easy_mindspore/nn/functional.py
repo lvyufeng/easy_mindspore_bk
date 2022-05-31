@@ -1,3 +1,5 @@
+import pstats
+import mindspore
 import mindspore.ops as ops
 
 # Non-linear activation functions
@@ -146,7 +148,26 @@ def kl_div(input, target, reduction='none', log_target=False):
     return kl_div
 
 def cross_entropy(input, target, weight=None, ignore_index=-100, reduction='mean', label_smoothing=0.0):
+    if input.size == target.size:
+        return _cross_entropy(input, target, weight, reduction, label_smoothing)
     return nll_loss(log_softmax(input, 1), target, weight, ignore_index, reduction, label_smoothing)
+
+def _cross_entropy(input, target, weight=None, reduction='mean', label_smoothing=0.0):
+    class_dim = 0 if input.ndim == 1 else 1
+    n_classes = input.shape[class_dim]
+    input = log_softmax(input, class_dim)
+    if label_smoothing > 0.0:
+        target = target * (1 - label_smoothing) + label_smoothing / n_classes
+    
+    if weight is None:
+        weight = ops.ones_like(input)
+
+    if reduction == 'mean':
+        return -(input * target * weight).sum() / (input.size / n_classes)
+    elif reduction == 'sum':
+        return -(input * target * weight).sum()
+    else:
+        return -(input * target * weight).sum(class_dim)
 
 def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean', label_smoothing=0.0):
     ndim = input.ndim
@@ -190,9 +211,12 @@ def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, redu
     if reduction == 'sum':
         nll_loss = nll_loss.sum()
         smooth_loss = smooth_loss.sum()
-    if reduction == 'mean':
+    elif reduction == 'mean':
         nll_loss = nll_loss.sum() / loss_weights.sum()
         smooth_loss = smooth_loss.mean()
+    else:
+        nll_loss = nll_loss.sum(target_dim)
+        smooth_loss = smooth_loss.sum(target_dim)
     
     eps_i = label_smoothing / input.shape[target_dim]
     loss = (1. - label_smoothing) * nll_loss + eps_i * smooth_loss

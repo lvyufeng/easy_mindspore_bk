@@ -96,10 +96,6 @@ def where(condition, x=None, y=None):
     return mnp.where(condition, x, y)
 
 @constexpr
-def randn(*shape, dtype=mstype.float32):
-    return Tensor(np.random.randn(*shape), dtype)
-
-@constexpr
 def normal(mean, std, shape):
     if isinstance(mean, Tensor):
         mean = mean.asnumpy()
