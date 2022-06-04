@@ -79,7 +79,7 @@ def gumbel_softmax():
     pass
 
 def log_softmax(input, axis=-1):
-    return ops.LogSoftmax(axis)(input)
+    return ops.log(ops.Softmax(axis)(input))
 
 def tanh():
     pass
@@ -204,9 +204,9 @@ def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, redu
         nll_loss = nll_loss.masked_fill(non_pad_mask, 0.)
         loss_weights = loss_weights.masked_fill(non_pad_mask, 0.)
         smooth_loss = smooth_loss.masked_fill(non_pad_mask, 0.)
-    else:
-        nll_loss = nll_loss.squeeze(target_dim)
-        smooth_loss = smooth_loss.squeeze(target_dim)
+
+    nll_loss = nll_loss.squeeze(target_dim)
+    smooth_loss = smooth_loss.squeeze(target_dim)
 
     if reduction == 'sum':
         nll_loss = nll_loss.sum()
@@ -214,9 +214,9 @@ def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, redu
     elif reduction == 'mean':
         nll_loss = nll_loss.sum() / loss_weights.sum()
         smooth_loss = smooth_loss.mean()
-    else:
-        nll_loss = nll_loss.sum(target_dim)
-        smooth_loss = smooth_loss.sum(target_dim)
+    # else:
+    #     nll_loss = nll_loss.sum(target_dim)
+    #     smooth_loss = smooth_loss.sum(target_dim)
     
     eps_i = label_smoothing / input.shape[target_dim]
     loss = (1. - label_smoothing) * nll_loss + eps_i * smooth_loss
@@ -250,3 +250,20 @@ def binary_cross_entropy_with_logits(input, target, weight=None, reduction='mean
         return ops.reduce_sum(output)
     else:
         return output
+
+
+def gumbel_softmax(logits, temperature, hard, axis=-1, eps=1e-20):
+    uniform_samples = ops.UniformReal()(logits.shape)
+    gumbels = -ops.log(-ops.log(uniform_samples + eps) + eps) # ~Gumbel(0, 1)
+    gumbels = (logits + gumbels) / temperature
+    y_soft = ops.Softmax(axis)(gumbels)
+
+    if hard:
+        # Straight through
+        index = y_soft.argmax(axis)
+        y_hard = ops.OneHot(axis)(index, y_soft.shape[axis], ops.scalar_to_array(1.0), ops.scalar_to_array(0.0))
+        ret = ops.stop_gradient(y_hard - y_soft) + y_soft
+    else:
+        # Reparametrization trick.
+        ret = y_soft
+    return ret

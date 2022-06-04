@@ -10,8 +10,8 @@ class TestNLLLoss(unittest.TestCase):
     def setUp(self) -> None:
         self.inputs = np.random.randn(3, 5)
         self.target = np.array([1, 0, 4])
-        self.inputs_2d = np.random.randn(3, 5, 1, 1)
-        self.target_2d = np.array([[[1]], [[0]], [[4]]])
+        self.inputs_2d = np.random.randn(3, 5, 4, 4)
+        self.target_2d = np.random.randint(0, 5, (3, 4, 4))
         self.weight = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
         return super().setUp()
 
@@ -39,7 +39,7 @@ class TestNLLLoss(unittest.TestCase):
 
         res_pt = nll_loss_pt(inputs_pt, target_pt, reduction='sum')
 
-        assert np.allclose(res_ms.asnumpy(), res_pt.numpy(), 1e-3, 1e-3)
+        assert np.allclose(res_ms.asnumpy(), res_pt.numpy(), atol=1e-3)
 
     def test_nll_loss_sum_with_weight(self):
         inputs_ms = mindspore.Tensor(self.inputs, mindspore.float32)
@@ -79,8 +79,8 @@ class TestNLLLoss(unittest.TestCase):
         target_pt = torch.tensor(self.target_2d)
 
         res_pt = nll_loss_pt(inputs_pt, target_pt, reduction='none')
-
-        assert np.allclose(res_ms.asnumpy(), res_pt, 1e-3, 1e-3)
+        print(res_ms.shape, res_pt.shape)
+        assert np.allclose(res_ms.asnumpy(), res_pt, atol=1e-3)
 
     def test_nll_loss2d_sum(self):
         inputs_ms = mindspore.Tensor(self.inputs_2d, mindspore.float32)

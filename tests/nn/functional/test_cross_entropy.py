@@ -9,8 +9,8 @@ class TestCrossEntropy(unittest.TestCase):
     def setUp(self) -> None:
         self.inputs = np.random.randn(3, 5)
         self.target = np.array([1, 0, 4])
-        self.inputs_2d = np.random.randn(3, 5, 1, 1)
-        self.target_2d = np.array([[[1]], [[0]], [[4]]])
+        self.inputs_2d = np.random.randn(3, 5, 4, 4)
+        self.target_2d = np.random.randint(0, 5, (3, 4, 4))
         self.prob_traget = np.random.randn(3, 5)
         self.weight = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
         return super().setUp()
