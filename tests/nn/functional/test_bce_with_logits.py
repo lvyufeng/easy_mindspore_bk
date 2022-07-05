@@ -12,6 +12,12 @@ class TestCrossEntropy(unittest.TestCase):
         self.weight = np.array([0.1, 0.2, 0.3])
         self.pos_weight = np.array([0.8, 0.2, 1.0])
         return super().setUp()
+    
+    def test_normal(self):
+        logits = mindspore.Tensor(np.array([[-0.8, 1.2, 0.7], [-0.1, -0.4, 0.7]]).astype(np.float32))
+        labels = mindspore.Tensor(np.array([[0.3, 0.8, 1.2], [-0.6, 0.1, 2.2]]).astype(np.float32))
+        output = binary_cross_entropy_with_logits_ms(logits, labels)
+        print(output)
 
     def test_binary_cross_entropy_with_logits_mean(self):
         inputs_ms = mindspore.Tensor(self.inputs, mindspore.float32)
