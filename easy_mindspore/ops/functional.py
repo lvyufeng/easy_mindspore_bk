@@ -1,8 +1,10 @@
 import mindspore
-from mindspore import Tensor
 import mindspore.ops as ops
-from .custom import *
+from mindspore import Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
+from .custom import *
+from .utils import *
+
 inf = float('inf')
 
 def _check_dtype(d1, d2):
@@ -23,7 +25,7 @@ def dot(a, b):
         b = ops.transpose(b, perm)
 
     if a.shape[-1] != b.shape[-1]:
-        raise ValueError('shapes are not aligned')
+        raise_value_error('shapes are not aligned')
     a_aligned = a.reshape(-1, a.shape[-1]).astype(mindspore.float32)
     b_aligned = b.reshape(-1, b.shape[-1]).astype(mindspore.float32)
 
@@ -98,7 +100,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
         # None of the str-type keywords for ord ('fro', 'nuc')
         # are valid for vectors
         elif isinstance(ord, str):
-            raise ValueError(f"Invalid norm order '{ord}' for vectors")
+            raise_value_error(f"Invalid norm order '{ord}' for vectors")
         else:
             absx = ops.abs(x)
             absx **= ord
@@ -113,7 +115,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
         row_axis = normalize_axis_index(row_axis, nd)
         col_axis = normalize_axis_index(col_axis, nd)
         if row_axis == col_axis:
-            raise ValueError('Duplicate axes given.')
+            raise_value_error('Duplicate axes given.')
         if ord == 2:
             ret =  _multi_svd_norm(x, row_axis, col_axis, 'amax')
         elif ord == -2:
@@ -140,7 +142,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
         elif ord == 'nuc':
             ret = _multi_svd_norm(x, row_axis, col_axis, sum)
         else:
-            raise ValueError("Invalid norm order for matrices.")
+            raise_value_error("Invalid norm order for matrices.")
         if keepdims:
             ret_shape = list(x.shape)
             ret_shape[axis[0]] = 1
@@ -148,7 +150,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
             ret = ret.reshape(ret_shape)
         return ret
     else:
-        raise ValueError("Improper number of dimensions to norm.")
+        raise_value_error("Improper number of dimensions to norm.")
 
 def _multi_svd_norm(x, row_axis, col_axis, op):
     y = moveaxis(x.astype(mindspore.float32), (row_axis, col_axis), (-2, -1))
@@ -164,7 +166,7 @@ def normalize_axis_index(axis, ndim):
     elif axis < 0 and axis >= -ndim:
         return ndim + axis
     else:
-        raise ValueError('axis is out of range.')
+        raise_value_error('axis is out of range.')
 
 def moveaxis(x, source, destination):
     perm = [i for i in range(x.ndim)]
@@ -174,3 +176,33 @@ def moveaxis(x, source, destination):
         perm[d] = tmp
     perm = tuple(perm)
     return ops.transpose(x, perm)
+
+def clip_grad_norm(grads, max_norm: float, norm_type: float = 2.0, error_if_nonfinite: bool = False):
+    if isinstance(grads, mindspore.Tensor):
+        grads = [grads]
+    max_norm = float(max_norm)
+    norm_type = float(norm_type)
+    if len(grads) == 0:
+        return mindspore.Tensor(0., mindspore.float32)
+
+    if norm_type == inf:
+        norms = [grad.abs().max() for grad in grads]
+        total_norm = norms[0] if len(norms) == 1 else ops.max(ops.stack(norms))
+    else:
+        total_norm = norm(ops.stack([norm(grad, norm_type) for grad in grads]), norm_type)
+
+    if error_if_nonfinite and ops.logical_or(ops.isnan(total_norm), ops.bool_not(ops.isfinite(total_norm))):
+        raise(
+            f'The total norm of order {norm_type} for gradients from '
+            '`parameters` is non-finite, so it cannot be clipped. To disable '
+            'this error and scale the gradients by the non-finite norm anyway, '
+            'set `error_if_nonfinite=False`')
+    clip_coef = max_norm / (total_norm + 1e-6)
+    # Note: multiplying by the clamped coef is redundant when the coef is clamped to 1, but doing so
+    # avoids a `if clip_coef < 1:` conditional which can require a CPU <=> device synchronization
+    # when the gradients do not reside in CPU memory.
+    clip_coef_clamped = clip_coef.clip(None, 1.0)
+    new_grads = []
+    for grad in grads:
+        new_grads.append(ops.mul(grad, clip_coef_clamped))
+    return new_grads, total_norm
