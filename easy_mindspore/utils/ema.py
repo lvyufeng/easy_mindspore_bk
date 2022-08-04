@@ -48,7 +48,7 @@ class TrainingWrapperEMA(nn.Cell):
         factor = 1 - self.exp(-self.global_steps / 2000)
         for i in range(self.lens):
             self.assign(self.weights_keep[i], factor * self.weights_keep[i])
-            self.assign_add(self.weights_keep[i], (1 - factor) * self.weights_keep[i])
+            self.assign_add(self.weights_keep[i], (1 - factor) * self.weights[i])
         
         self.assign_add(self.global_steps, 1.)
         
