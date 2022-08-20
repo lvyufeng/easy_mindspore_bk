@@ -63,6 +63,7 @@ class TestNorm(unittest.TestCase):
     def test_norm_b_1(self):
         out = norm(self.b, 1)
         out_np = np.linalg.norm(self.b.asnumpy(), 1)
+        print(out, out_np)
 
         assert np.allclose(out.asnumpy(), out_np, 1e-5, 1e-5)
 

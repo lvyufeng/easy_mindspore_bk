@@ -2,8 +2,9 @@ import mindspore
 import mindspore.ops as ops
 from mindspore import Tensor
 from mindspore.ops._primitive_cache import _get_cache_prim
-from .custom import *
-from .utils import *
+from mindspore.ops.operations.linalg_ops import Svd
+from ..custom import *
+from ..utils import *
 
 inf = float('inf')
 
@@ -13,6 +14,11 @@ def _check_dtype(d1, d2):
     if d1 == d2:
         return d1
     raise ValueError('dtype is not supported.')
+
+
+def conj(x):
+    conj = _get_cache_prim(ops.Conj)()
+    return conj(x)
 
 def dot(a, b):
     res_dtype = _check_dtype(a.dtype, b.dtype)
@@ -41,7 +47,7 @@ def reciprocal(x):
     if isinstance(x, Tensor):
         reciprocal = _get_cache_prim(ops.Reciprocal)()
         return reciprocal(x)
-    return 1/x
+    return 1 / x
 
 # grad operations
 def get_grads():
@@ -53,31 +59,48 @@ def bmm(x, y, transpose_x=False, transpose_y=False):
 def masked_fill_(inputs:Tensor, mask:Tensor, value:float):
     return ops.masked_fill(inputs, mask, value)
 
-def norm(x, ord=None, axis=None, keepdims=False):
-    # Immediately handle some default, simple, fast, and common cases.
+@constexpr
+def _check_axis(axis, ord, ndim):
     if axis is None:
-        ndim = x.ndim
+        axis = tuple(range(ndim))
         if ((ord is None) or
             (ord in ('f', 'fro') and ndim == 2) or
             (ord == 2 and ndim == 1)):
+            return axis, True
+        else:
+            return axis, False
+    else:
+        if isinstance(axis, int):
+            axis = (axis,)
+        elif isinstance(axis, tuple):
+            if len(axis) > 2:
+                raise ValueError("Improper number of dimensions to norm.")
+        else:
+            raise ValueError(f'axis should be int or tuple but got {type(axis)}')
+        return axis, False
 
-            x = x.ravel()
-            sqnorm = dot(x, x)
-            ret = sqrt(sqnorm)
-            if keepdims:
-                ret = ret.reshape(ndim*[1])
-            return ret
+@constexpr
+def _check_ord(ord, axis):
+    if len(axis) == 1:
+        if isinstance(ord, str):
+            raise ValueError(f"Invalid norm order '{ord}' for vectors")
+    elif len(axis) == 2:
+        if ord not in [2, -2, 1, -1, inf, -inf, 'fro', 'f', 'nuc', None]:
+            raise ValueError("Invalid norm order for matrices.")
 
+def norm(x, ord=None, axis=None, keepdims=False):
+    ndim = x.ndim
     # Normalize the `axis` argument to a tuple.
-    nd = x.ndim
-    if axis is None:
-        axis = tuple(range(nd))
-    elif not isinstance(axis, tuple):
-        try:
-            axis = int(axis)
-        except Exception as e:
-            raise TypeError("'axis' must be None, an integer or a tuple of integers") from e
-        axis = (axis,)
+    axis, immediate = _check_axis(axis, ord, ndim)
+    _check_ord(ord, axis)
+    # Immediately handle some default, simple, fast, and common cases.
+    if immediate:
+        x = x.ravel()
+        sqnorm = dot(x, x)
+        ret = sqrt(sqnorm)
+        if keepdims:
+            ret = ret.reshape(ndim*[1])
+        return ret
 
     if len(axis) == 1:
         if ord == inf:
@@ -93,14 +116,11 @@ def norm(x, ord=None, axis=None, keepdims=False):
             return ops.reduce_sum(ops.abs(x), axis=axis)
         elif ord is None or ord == 2:
             # special case for speedup
-            conj = _get_cache_prim(ops.Conj)()
             s = conj(x) * x
             reduce_sum = _get_cache_prim(ops.ReduceSum)(keepdims)
             return sqrt(reduce_sum(s, axis=axis))
         # None of the str-type keywords for ord ('fro', 'nuc')
         # are valid for vectors
-        elif isinstance(ord, str):
-            raise_value_error(f"Invalid norm order '{ord}' for vectors")
         else:
             absx = ops.abs(x)
             absx **= ord
@@ -112,10 +132,11 @@ def norm(x, ord=None, axis=None, keepdims=False):
             return ret
     elif len(axis) == 2:
         row_axis, col_axis = axis
-        row_axis = normalize_axis_index(row_axis, nd)
-        col_axis = normalize_axis_index(col_axis, nd)
+        row_axis = normalize_axis_index(row_axis, ndim)
+        col_axis = normalize_axis_index(col_axis, ndim)
         if row_axis == col_axis:
             raise_value_error('Duplicate axes given.')
+
         if ord == 2:
             ret =  _multi_svd_norm(x, row_axis, col_axis, 'amax')
         elif ord == -2:
@@ -137,12 +158,11 @@ def norm(x, ord=None, axis=None, keepdims=False):
                 row_axis -= 1
             ret = ops.reduce_sum(abs(x), axis=col_axis).min(axis=row_axis)
         elif ord in [None, 'fro', 'f']:
-            conj = _get_cache_prim(ops.Conj)()
             ret = sqrt(ops.reduce_sum((conj(x) * x), axis=axis))
         elif ord == 'nuc':
             ret = _multi_svd_norm(x, row_axis, col_axis, sum)
         else:
-            raise_value_error("Invalid norm order for matrices.")
+            ret = sqrt(ops.reduce_sum((conj(x) * x), axis=axis))
         if keepdims:
             ret_shape = list(x.shape)
             ret_shape[axis[0]] = 1
@@ -150,7 +170,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
             ret = ret.reshape(ret_shape)
         return ret
     else:
-        raise_value_error("Improper number of dimensions to norm.")
+        return None
 
 def _multi_svd_norm(x, row_axis, col_axis, op):
     y = moveaxis(x.astype(mindspore.float32), (row_axis, col_axis), (-2, -1))
@@ -158,6 +178,8 @@ def _multi_svd_norm(x, row_axis, col_axis, op):
         result = ops.svd(y, compute_uv=False).max(axis=-1)
     elif op == 'amin':
         result = ops.svd(y, compute_uv=False).min(axis=-1)
+    else:
+        result = None
     return result
 
 def normalize_axis_index(axis, ndim):
@@ -183,16 +205,19 @@ def clip_grad_norm(grads, max_norm: float, norm_type: float = 2.0, error_if_nonf
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if len(grads) == 0:
-        return mindspore.Tensor(0., mindspore.float32)
+        return [], mindspore.Tensor(0., mindspore.float32)
 
     if norm_type == inf:
         norms = [grad.abs().max() for grad in grads]
         total_norm = norms[0] if len(norms) == 1 else ops.max(ops.stack(norms))
     else:
-        total_norm = norm(ops.stack([norm(grad, norm_type) for grad in grads]), norm_type)
+        norms = ()
+        for grad in grads:
+            norms += (norm(grad, norm_type),)
+        total_norm = norm(ops.stack(norms), norm_type)
 
     if error_if_nonfinite and ops.logical_or(ops.isnan(total_norm), ops.bool_not(ops.isfinite(total_norm))):
-        raise(
+        raise_runtime_error(
             f'The total norm of order {norm_type} for gradients from '
             '`parameters` is non-finite, so it cannot be clipped. To disable '
             'this error and scale the gradients by the non-finite norm anyway, '

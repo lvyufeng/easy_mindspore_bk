@@ -1,0 +1,4 @@
+mindspore-cuda11-dev
+torch
+numpy
+pytest

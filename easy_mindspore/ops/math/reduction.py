@@ -1,0 +1,31 @@
+from mindspore import ops
+from mindspore.ops._primitive_cache import _get_cache_prim
+# argmax
+# argmin
+# amax
+# amin
+# aminmax
+# all
+# any
+# max
+# min
+# dist
+# logsumexp
+# mean
+# nanmean
+# median
+# nanmedian
+# mode
+# norm
+# nansum
+# prod
+# quantile
+# nanquantile
+# std
+# std_mean
+# sum
+# unique
+# unique_consecutive
+# var
+# var_mean
+# count_nonzero

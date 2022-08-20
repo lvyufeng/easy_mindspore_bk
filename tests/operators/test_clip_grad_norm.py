@@ -2,7 +2,7 @@ import unittest
 import mindspore
 import torch
 import numpy as np
-from easy_mindspore.ops.functional import clip_grad_norm
+from easy_mindspore.ops.neural_network.functional import clip_grad_norm
 from easy_mindspore import value_and_grad
 
 class NetPT(torch.nn.Module):

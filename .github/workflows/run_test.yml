@@ -1,0 +1,87 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Run tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  linux-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/cpu_requirements.txt
+    # - name: Analysing the code with pylint
+    #   run: |
+    #     pylint $(git ls-files 'cybertron/*.py')
+    - name: Test with pytest
+      run: |
+        pytest
+  windows-test:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/cpu_requirements.txt
+    # - name: Analysing the code with pylint
+    #   run: |
+    #     pylint $(git ls-files 'cybertron/*.py')
+    - name: Test with pytest
+      run: |
+        pytest
+  macos-test:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/cpu_requirements.txt
+
+    - name: Test with pytest
+      run: |
+        pytest
+
+  kaggle-gpu:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.7
+    - uses: "lvyufeng/action-kaggle-gpu-test@latest"
+      with:
+        git_access_token: "${{ secrets.GIT_READ_ONLY_ACCESS_TOKEN }}"
+        kaggle_api_key: "${{ secrets.KAGGLE_API_KEY }}"
+        kaggle_username: "${{ secrets.KAGGLE_USERNAME }}"
+        repository_name: "${{ github.repository }}"
+        test_folder: tests
+        python_requirements: requirements/gpu_requirements.txt
+        env_name: mindspore
+        python_version: 3.7
+        cuda_version: 11.1
