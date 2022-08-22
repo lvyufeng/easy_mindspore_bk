@@ -9,9 +9,9 @@ from torch.nn.functional import nll_loss as nll_loss_pt
 class TestNLLLoss(unittest.TestCase):
     def setUp(self) -> None:
         self.inputs = np.random.randn(3, 5)
-        self.target = np.array([1, 0, 4])
+        self.target = np.array([1, 0, 4], np.int64)
         self.inputs_2d = np.random.randn(3, 5, 4, 4)
-        self.target_2d = np.random.randint(0, 5, (3, 4, 4))
+        self.target_2d = np.random.randint(0, 5, (3, 4, 4), np.int64)
         self.weight = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
         return super().setUp()
 

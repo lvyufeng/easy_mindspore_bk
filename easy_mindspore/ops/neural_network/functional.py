@@ -102,6 +102,8 @@ def norm(x, ord=None, axis=None, keepdims=False):
             ret = ret.reshape(ndim*[1])
         return ret
 
+    if x.dtype == mindspore.int32:
+        x = x.astype(mindspore.float32)
     if len(axis) == 1:
         if ord == inf:
             return ops.abs(x).max(axis=axis, keepdims=keepdims)
