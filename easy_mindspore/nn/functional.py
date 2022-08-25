@@ -192,6 +192,9 @@ def nll_loss(input, target, weight=None, ignore_index=None, reduction='mean', la
 def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, reduction='none', label_smoothing=0.0):
     if target.ndim == input.ndim - 1:
         target = target.expand_dims(target_dim)
+    if ignore_index is not None:
+        non_pad_mask = ops.equal(target, ignore_index)
+        target = target.masked_fill(non_pad_mask, 0)
     nll_loss = -ops.gather_d(input, target_dim, target)
     smooth_loss = -input.sum(axis=target_dim, keepdims=True)
     if weight is not None:
@@ -200,7 +203,6 @@ def _nll_loss(input, target, target_dim=-1, weight=None, ignore_index=None, redu
     else:
         loss_weights = ops.ones_like(nll_loss)
     if ignore_index is not None:
-        non_pad_mask = ops.equal(target, ignore_index)
         nll_loss = nll_loss.masked_fill(non_pad_mask, 0.)
         loss_weights = loss_weights.masked_fill(non_pad_mask, 0.)
         smooth_loss = smooth_loss.masked_fill(non_pad_mask, 0.)

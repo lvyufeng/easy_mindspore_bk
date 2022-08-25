@@ -13,6 +13,7 @@ class TestNLLLoss(unittest.TestCase):
         self.inputs_2d = np.random.randn(3, 5, 4, 4)
         self.target_2d = np.random.randint(0, 5, (3, 4, 4), np.int64)
         self.weight = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+
         return super().setUp()
 
     def test_nll_loss_mean(self):
@@ -57,15 +58,16 @@ class TestNLLLoss(unittest.TestCase):
         assert np.allclose(res_ms.asnumpy(), res_pt.numpy(), 1e-3, 1e-3)
 
     def test_nll_loss_mean_ignore_index(self):
+        self.target[2] = -100
         inputs_ms = mindspore.Tensor(self.inputs, mindspore.float32)
         target_ms = mindspore.Tensor(self.target, mindspore.int32)
 
-        res_ms = nll_loss_ms(inputs_ms, target_ms, ignore_index=0)
+        res_ms = nll_loss_ms(inputs_ms, target_ms, ignore_index=-100)
 
         inputs_pt = torch.tensor(self.inputs)
         target_pt = torch.tensor(self.target)
 
-        res_pt = nll_loss_pt(inputs_pt, target_pt, ignore_index=0)
+        res_pt = nll_loss_pt(inputs_pt, target_pt, ignore_index=-100)
 
         assert np.allclose(res_ms.asnumpy(), res_pt.numpy(), 1e-3, 1e-3)
 
