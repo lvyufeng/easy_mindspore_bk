@@ -32,7 +32,14 @@ def minimum(input, other):
 # fmax
 # fmin
 # ne
+def ne(input, other):
+    _ne = _get_cache_prim(ops.NotEqual)()
+    return _ne(input, other)
 # not_equal
+not_equal = ne
 # sort
+def sort(input, dim=-1, descending=False):
+    _sort = _get_cache_prim(ops.Sort)(dim, descending)
+    return _sort(input)
 # topk
 # msort
