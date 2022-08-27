@@ -2,7 +2,7 @@ import unittest
 import mindspore
 import numpy as np
 import mindspore.ops as ops
-from easy_mindspore.ops import norm, inf
+from easy_mindspore.func import norm, inf
 
 class TestNorm(unittest.TestCase):
     def setUp(self):

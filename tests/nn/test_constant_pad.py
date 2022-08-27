@@ -2,7 +2,7 @@ import unittest
 import mindspore
 import mindspore.numpy as mnp
 from mindspore import Tensor
-from easy_mindspore.nn.padding_layers import ConstantPad1d
+from easy_mindspore.nn import ConstantPad1d
 
 class TestConstantPad(unittest.TestCase):
     def test_constant_pad_1d(self):

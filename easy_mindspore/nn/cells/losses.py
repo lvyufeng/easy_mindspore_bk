@@ -1,7 +1,7 @@
 import mindspore.nn as nn
 from typing import Optional
 from mindspore import Tensor
-from .functional import *
+from ..functional import *
 
 class KLDivLoss(nn.Cell):
     reduction_list = ['sum', 'mean', 'none']

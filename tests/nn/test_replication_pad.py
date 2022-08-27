@@ -2,7 +2,7 @@ import unittest
 import mindspore
 import mindspore.numpy as mnp
 from mindspore import Tensor
-from easy_mindspore.nn.padding_layers import ReplicationPad1d
+from easy_mindspore.nn import ReplicationPad1d
 
 class TestReplicationPad(unittest.TestCase):
     def test_replication_pad_1d(self):

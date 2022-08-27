@@ -2,7 +2,7 @@ import unittest
 import mindspore
 import mindspore.numpy as mnp
 from mindspore import Tensor
-from easy_mindspore.nn.padding_layers import ZeroPad2d
+from easy_mindspore.nn import ZeroPad2d
 
 class TestReflectionPad(unittest.TestCase):
     def test_zero_pad_2d(self):

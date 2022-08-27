@@ -9,7 +9,7 @@ from mindspore._checkparam import Validator as validator
 from typing import overload, Union, List, Tuple
 from .tensor import *
 from .core.api import *
-from .ops.random import *
+from .func.random import *
 
 # _size = Union[List[int], Tuple[int, ...]]
 

@@ -1,7 +1,7 @@
 import unittest
 import mindspore
 from mindspore import Tensor
-from easy_mindspore.ops.custom import MaskedFill
+from easy_mindspore.func.custom import MaskedFill
 import mindspore.ops as P
 
 class TestMaskedFill(unittest.TestCase):
