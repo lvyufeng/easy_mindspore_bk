@@ -78,3 +78,9 @@ class DataSinker():
 
     def dynamic_min_max_shapes(self):
         return self.dataset.dynamic_min_max_shapes()
+
+def data_sink(fn=None, dataset=None, steps=1, sink_size=-1, dynamic_shape=False, offload=False):
+    data_sinker = DataSinker(steps, sink_size, dynamic_shape, offload)
+    def inner():
+        pass
+    return inner

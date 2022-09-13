@@ -2,7 +2,6 @@ from typing import Any
 from collections import OrderedDict
 
 import mindspore
-from mindspore import ms_class
 from mindspore import log as logger
 
 class _RequiredParameter(object):
@@ -13,7 +12,6 @@ class _RequiredParameter(object):
 required = _RequiredParameter()
 
 
-@ms_class
 class Optimizer:
     def __init__(self, params, defaults):
         self.param_groups = []

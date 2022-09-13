@@ -11,7 +11,14 @@ class TestTensorCreation(unittest.TestCase):
         assert y.dtype == mstype.int32
 
     def test_randn(self):
-        x = ems.randn(4, dtype=mindspore.float32)
-        y = ems.randn(2, 3, dtype=mindspore.float32)
+        x = ems.randn(4)
+        y = ems.randn(2, 3)
         assert x.shape == (4,)
         assert y.shape == (2, 3)
+
+    def test_randint(self):
+        x = ems.randint(3, 5, (3,))
+        y = ems.randint(3, 10, (2, 2))
+        print(x, y)
+        assert x.shape == (3,)
+        assert y.shape == (2, 2)

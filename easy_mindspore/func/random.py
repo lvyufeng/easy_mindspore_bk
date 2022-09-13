@@ -1,7 +1,7 @@
-import mindspore.ops as ops
-import mindspore.common.dtype as mstype
-from mindspore.ops._primitive_cache import _get_cache_prim
-from mindspore.common.seed import get_seed
+import mindspore
+from mindspore import Tensor
+from mindspore.common.initializer import Normal
+from ..initializer import Uniform
 # bernoulli
 # multinomial
 # normal
@@ -9,16 +9,15 @@ from mindspore.common.seed import get_seed
 # rand
 # rand_like
 # randint
+def randint(low, high, size, dtype=None):
+    if dtype is None:
+        dtype = mindspore.int32
+    return Tensor(shape=size, dtype=dtype, init=Uniform(low, high))
 # randint_like
 # randn
 def randn(*size, dtype=None):
-    seed = get_seed()
-    if seed is not None:
-        _std_normal = _get_cache_prim(ops.StandardNormal)(seed=seed)
-    else:
-        _std_normal = _get_cache_prim(ops.StandardNormal)()
-    if dtype is not None:
-        return _std_normal(size).astype(dtype)
-    return _std_normal(size)
+    if dtype is None:
+        dtype = mindspore.float32
+    return Tensor(shape=size, dtype=dtype, init=Normal(1.0))
 # randn_like
 # randperm
