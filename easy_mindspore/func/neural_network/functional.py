@@ -90,6 +90,9 @@ def _check_ord(ord, axis):
 
 def norm(x, ord=None, axis=None, keepdims=False):
     ndim = x.ndim
+    if ndim > 2 and axis is None:
+        x = x.reshape(-1)
+        ndim = 1
     # Normalize the `axis` argument to a tuple.
     axis, immediate = _check_axis(axis, ord, ndim)
     _check_ord(ord, axis)
@@ -229,7 +232,7 @@ def clip_grad_norm(grads, max_norm: float, norm_type: float = 2.0, error_if_nonf
     # avoids a `if clip_coef < 1:` conditional which can require a CPU <=> device synchronization
     # when the gradients do not reside in CPU memory.
     clip_coef_clamped = clip_coef.clip(None, 1.0)
-    new_grads = []
+    new_grads = ()
     for grad in grads:
-        new_grads.append(ops.mul(grad, clip_coef_clamped))
+        new_grads += (ops.mul(grad, clip_coef_clamped),)
     return new_grads, total_norm
